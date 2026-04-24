@@ -1,0 +1,4 @@
+repository "Survivor_Project@tj_lololollop@cloud.cn"
+  path "/"
+    br "/main"
+    co "/main"
