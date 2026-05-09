@@ -42,6 +42,8 @@ public class PlayerController : MonoBehaviour
     [Header("Shooting")]
     public GameObject bulletPrefab;
     public Transform firePoint;
+    [Range(0f, 1f)] public float aimAssistStrength = 0.40f;
+    public float aimAssistAngle = 30f;
 
     private Rigidbody2D rb;
     private Vector2 movement;
@@ -96,7 +98,7 @@ public class PlayerController : MonoBehaviour
             return;
         }
 
-        if (Input.GetButton("Fire1") && Time.time >= nextFireTime)
+        if (Time.time >= nextFireTime)
         {
             Shoot();
             nextFireTime = Time.time + combatConfig.fireInterval;
@@ -193,7 +195,17 @@ public class PlayerController : MonoBehaviour
             return;
         }
 
-        GameObject bulletObject = Instantiate(bulletPrefab, firePoint.position, firePoint.rotation);
+        Vector2 mouseDirection = (mousePos - (Vector2)firePoint.position).normalized;
+        if (mouseDirection.sqrMagnitude <= 0.0001f)
+        {
+            mouseDirection = transform.up;
+        }
+
+        Vector2 finalDirection = GetAimAssistDirection(mouseDirection);
+        float bulletAngle = Mathf.Atan2(finalDirection.y, finalDirection.x) * Mathf.Rad2Deg - 90f;
+        Quaternion bulletRotation = Quaternion.Euler(0f, 0f, bulletAngle);
+
+        GameObject bulletObject = Instantiate(bulletPrefab, firePoint.position, bulletRotation);
         Bullet bullet = bulletObject.GetComponent<Bullet>();
         if (bullet != null)
         {
@@ -262,5 +274,43 @@ public class PlayerController : MonoBehaviour
         {
             StatsChanged(this);
         }
+    }
+
+    private Vector2 GetAimAssistDirection(Vector2 mouseDirection)
+    {
+        Enemy[] enemies = FindObjectsOfType<Enemy>();
+        Enemy bestEnemy = null;
+        float bestDistance = float.MaxValue;
+
+        for (int i = 0; i < enemies.Length; i++)
+        {
+            Enemy enemy = enemies[i];
+            Vector2 toEnemy = (Vector2)enemy.transform.position - (Vector2)firePoint.position;
+            if (toEnemy.sqrMagnitude <= 0.0001f)
+            {
+                continue;
+            }
+
+            float angleToEnemy = Vector2.Angle(mouseDirection, toEnemy);
+            if (angleToEnemy > aimAssistAngle)
+            {
+                continue;
+            }
+
+            float distance = toEnemy.sqrMagnitude;
+            if (distance < bestDistance)
+            {
+                bestDistance = distance;
+                bestEnemy = enemy;
+            }
+        }
+
+        if (bestEnemy == null)
+        {
+            return mouseDirection;
+        }
+
+        Vector2 enemyDirection = ((Vector2)bestEnemy.transform.position - (Vector2)firePoint.position).normalized;
+        return Vector2.Lerp(mouseDirection, enemyDirection, aimAssistStrength).normalized;
     }
 }
