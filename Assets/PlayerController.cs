@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using UnityEngine;
 
 [Serializable]
@@ -21,13 +22,18 @@ public class PlayerProgressionConfig
     public int startLevel = 1;
     public int experienceToFirstLevel = 5;
     public float experienceGrowth = 1.35f;
+    public float experiencePickupRadius = 0.35f;
+    public float pickupRangeIncrease = 0.75f;
+    public float maxExperiencePickupRadius = 4f;
 }
 
 public enum UpgradeType
 {
     FireRate,
     Multishot,
-    GiantBullet
+    GiantBullet,
+    PickupRange,
+    MaxHealth
 }
 
 public class LevelUpOption
@@ -61,6 +67,7 @@ public class PlayerController : MonoBehaviour
     private bool inputLocked;
     private bool isDead;
     private float lastHorizontalFacing = 1f;
+    private float invulnerableUntil;
 
     public event Action<PlayerController> StatsChanged;
     public event Action<LevelUpOption[]> LevelUpOffered;
@@ -78,8 +85,10 @@ public class PlayerController : MonoBehaviour
     public int ProjectilesPerShot { get { return combatConfig.projectilesPerShot; } }
     public float BulletScaleMultiplier { get { return combatConfig.bulletScaleMultiplier; } }
     public int BulletDamageMultiplier { get { return combatConfig.bulletDamageMultiplier; } }
+    public float ExperiencePickupRadius { get { return progressionConfig.experiencePickupRadius; } }
     public bool IsDead { get { return isDead; } }
     public bool IsInputLocked { get { return inputLocked; } }
+    public bool IsInvulnerable { get { return Time.time < invulnerableUntil; } }
 
     private void Start()
     {
@@ -88,6 +97,7 @@ public class PlayerController : MonoBehaviour
         currentHealth = combatConfig.maxHealth;
         currentLevel = Mathf.Max(1, progressionConfig.startLevel);
         experienceToNextLevel = Mathf.Max(1, progressionConfig.experienceToFirstLevel);
+        ValidateProgressionConfig();
         NotifyStatsChanged();
     }
 
@@ -134,7 +144,7 @@ public class PlayerController : MonoBehaviour
 
     public void TakeDamage(int damage)
     {
-        if (isDead)
+        if (isDead || IsInvulnerable)
         {
             return;
         }
@@ -156,6 +166,23 @@ public class PlayerController : MonoBehaviour
         }
 
         currentHealth = Mathf.Min(combatConfig.maxHealth, currentHealth + amount);
+        NotifyStatsChanged();
+    }
+
+    public void RestoreHealthForNewWave(float invulnerabilityDuration)
+    {
+        if (isDead)
+        {
+            return;
+        }
+
+        currentHealth = combatConfig.maxHealth;
+
+        if (invulnerabilityDuration > 0f)
+        {
+            invulnerableUntil = Mathf.Max(invulnerableUntil, Time.time + invulnerabilityDuration);
+        }
+
         NotifyStatsChanged();
     }
 
@@ -190,6 +217,14 @@ public class PlayerController : MonoBehaviour
             case UpgradeType.GiantBullet:
                 combatConfig.bulletScaleMultiplier *= 1.5f;
                 combatConfig.bulletDamageMultiplier *= 2;
+                break;
+            case UpgradeType.PickupRange:
+                progressionConfig.experiencePickupRadius = Mathf.Min(
+                    progressionConfig.maxExperiencePickupRadius,
+                    progressionConfig.experiencePickupRadius + progressionConfig.pickupRangeIncrease);
+                break;
+            case UpgradeType.MaxHealth:
+                combatConfig.maxHealth += 5;
                 break;
         }
 
@@ -268,10 +303,7 @@ public class PlayerController : MonoBehaviour
         currentLevel += 1;
         experienceToNextLevel = Mathf.CeilToInt(experienceToNextLevel * progressionConfig.experienceGrowth);
 
-        LevelUpOption[] options = new LevelUpOption[3];
-        options[0] = BuildOption(UpgradeType.FireRate);
-        options[1] = BuildOption(UpgradeType.Multishot);
-        options[2] = BuildOption(UpgradeType.GiantBullet);
+        LevelUpOption[] options = BuildRandomOptions(3);
 
         inputLocked = true;
 
@@ -279,6 +311,51 @@ public class PlayerController : MonoBehaviour
         {
             LevelUpOffered(options);
         }
+    }
+
+    private LevelUpOption[] BuildRandomOptions(int optionCount)
+    {
+        List<UpgradeType> candidateTypes = new List<UpgradeType>
+        {
+            UpgradeType.FireRate,
+            UpgradeType.Multishot,
+            UpgradeType.GiantBullet,
+            UpgradeType.MaxHealth
+        };
+
+        if (progressionConfig.experiencePickupRadius < progressionConfig.maxExperiencePickupRadius - 0.01f)
+        {
+            candidateTypes.Add(UpgradeType.PickupRange);
+        }
+
+        int count = Mathf.Min(optionCount, candidateTypes.Count);
+        LevelUpOption[] options = new LevelUpOption[count];
+        for (int i = 0; i < count; i++)
+        {
+            int randomIndex = UnityEngine.Random.Range(0, candidateTypes.Count);
+            options[i] = BuildOption(candidateTypes[randomIndex]);
+            candidateTypes.RemoveAt(randomIndex);
+        }
+
+        return options;
+    }
+
+    private void ValidateProgressionConfig()
+    {
+        if (progressionConfig.pickupRangeIncrease <= 0f)
+        {
+            progressionConfig.pickupRangeIncrease = 0.75f;
+        }
+
+        if (progressionConfig.maxExperiencePickupRadius <= 0f)
+        {
+            progressionConfig.maxExperiencePickupRadius = 4f;
+        }
+
+        progressionConfig.experiencePickupRadius = Mathf.Clamp(
+            progressionConfig.experiencePickupRadius,
+            0.35f,
+            progressionConfig.maxExperiencePickupRadius);
     }
 
     private LevelUpOption BuildOption(UpgradeType type)
@@ -294,11 +371,19 @@ public class PlayerController : MonoBehaviour
                 break;
             case UpgradeType.Multishot:
                 option.Title = "Multishot";
-                option.Description = "Shoot forward plus two extra bullets at +/-15 degrees";
+                option.Description = "Add two bullets; spread stays within +/-15 degrees";
                 break;
-            default:
+            case UpgradeType.GiantBullet:
                 option.Title = "Giant Bullet";
                 option.Description = "Bullet scale x1.5 and damage x2";
+                break;
+            case UpgradeType.PickupRange:
+                option.Title = "Pickup Range";
+                option.Description = "Collect nearby experience gems from farther away";
+                break;
+            default:
+                option.Title = "Max Health Up";
+                option.Description = "Max health +5";
                 break;
         }
 

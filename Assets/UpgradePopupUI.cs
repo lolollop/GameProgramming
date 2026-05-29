@@ -36,7 +36,7 @@ public class UpgradePopupUI : MonoBehaviour
         panelRect.pivot = new Vector2(0.5f, 0.5f);
         panelRect.sizeDelta = new Vector2(520f, 300f);
 
-        Text title = CreateText("Title", panelObject.transform, "Level Up", 30, TextAnchor.MiddleCenter);
+        Text title = CreateText("Title", panelObject.transform, "LEVEL UP - CHOOSE UPGRADE", 30, TextAnchor.MiddleCenter);
         RectTransform titleRect = title.GetComponent<RectTransform>();
         titleRect.anchorMin = new Vector2(0f, 1f);
         titleRect.anchorMax = new Vector2(1f, 1f);

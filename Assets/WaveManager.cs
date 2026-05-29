@@ -7,7 +7,9 @@ public class WaveManager : MonoBehaviour
 {
     [Header("Wave")]
     [SerializeField] private int totalWaves = 10;
-    [SerializeField] private float waveDuration = 60f;
+    [SerializeField] private float waveDuration = 40f;
+    [SerializeField] private float waveStartInvulnerability = 1.5f;
+    [SerializeField] private float waveStartBannerDuration = 2.5f;
 
     [Header("Enemy Prefabs")]
     [SerializeField] private GameObject enemyTier1Prefab;
@@ -32,6 +34,8 @@ public class WaveManager : MonoBehaviour
     private int currentWave = 1;
     private float waveElapsedTime;
     private float nextSpawnTime;
+    private float waveBannerUntil;
+    private bool waveBannerRestoredHealth;
     private bool finalWaveTimeEnded;
     private bool gameWon;
 
@@ -72,11 +76,13 @@ public class WaveManager : MonoBehaviour
             victoryUIRoot.SetActive(false);
         }
 
-        nextSpawnTime = Time.time + 0.5f;
+        BeginWave(false);
     }
 
     private void Update()
     {
+        RefreshPlayerReference();
+
         if (gameWon || player == null || player.IsDead)
         {
             return;
@@ -146,8 +152,42 @@ public class WaveManager : MonoBehaviour
         }
 
         currentWave += 1;
+        BeginWave(true);
+    }
+
+    private void BeginWave(bool restorePlayerHealth)
+    {
         waveElapsedTime = 0f;
-        nextSpawnTime = Time.time + 0.25f;
+        nextSpawnTime = Time.time + 0.75f;
+
+        if (restorePlayerHealth)
+        {
+            RestorePlayerHealthForNewWave();
+        }
+
+        waveBannerRestoredHealth = restorePlayerHealth;
+        waveBannerUntil = Time.time + waveStartBannerDuration;
+    }
+
+    private void RefreshPlayerReference()
+    {
+        if (player != null)
+        {
+            return;
+        }
+
+        player = FindObjectOfType<PlayerController>();
+    }
+
+    private void RestorePlayerHealthForNewWave()
+    {
+        player = FindObjectOfType<PlayerController>();
+        if (player == null)
+        {
+            return;
+        }
+
+        player.RestoreHealthForNewWave(waveStartInvulnerability);
     }
 
     private void TrySpawnEnemy()
@@ -185,10 +225,10 @@ public class WaveManager : MonoBehaviour
 
         if (currentWave <= 7)
         {
-            return Random.value < 0.7f ? 1 : 2;
+            return UnityEngine.Random.value < 0.7f ? 1 : 2;
         }
 
-        float roll = Random.value;
+        float roll = UnityEngine.Random.value;
         if (roll < 0.5f)
         {
             return 1;
@@ -238,24 +278,24 @@ public class WaveManager : MonoBehaviour
         if (cam != null)
         {
             float margin = 0.08f;
-            int side = Random.Range(0, 4);
+            int side = UnityEngine.Random.Range(0, 4);
             Vector3 viewportPosition;
 
             if (side == 0)
             {
-                viewportPosition = new Vector3(-margin, Random.value, -cam.transform.position.z);
+                viewportPosition = new Vector3(-margin, UnityEngine.Random.value, -cam.transform.position.z);
             }
             else if (side == 1)
             {
-                viewportPosition = new Vector3(1f + margin, Random.value, -cam.transform.position.z);
+                viewportPosition = new Vector3(1f + margin, UnityEngine.Random.value, -cam.transform.position.z);
             }
             else if (side == 2)
             {
-                viewportPosition = new Vector3(Random.value, 1f + margin, -cam.transform.position.z);
+                viewportPosition = new Vector3(UnityEngine.Random.value, 1f + margin, -cam.transform.position.z);
             }
             else
             {
-                viewportPosition = new Vector3(Random.value, -margin, -cam.transform.position.z);
+                viewportPosition = new Vector3(UnityEngine.Random.value, -margin, -cam.transform.position.z);
             }
 
             Vector3 worldPosition = cam.ViewportToWorldPoint(viewportPosition);
@@ -263,7 +303,7 @@ public class WaveManager : MonoBehaviour
             return worldPosition;
         }
 
-        Vector2 offset = Random.insideUnitCircle;
+        Vector2 offset = UnityEngine.Random.insideUnitCircle;
         if (offset.sqrMagnitude <= 0.0001f)
         {
             offset = Vector2.right;
@@ -330,16 +370,56 @@ public class WaveManager : MonoBehaviour
     {
         if (gameWon && victoryUIRoot == null)
         {
-            GUI.Box(new Rect(Screen.width * 0.5f - 150f, Screen.height * 0.5f - 50f, 300f, 100f), "Victory");
+            GUI.Box(new Rect(Screen.width * 0.5f - 150f, Screen.height * 0.5f - 50f, 300f, 100f), "MISSION CLEAR");
             GUI.Label(new Rect(Screen.width * 0.5f - 105f, Screen.height * 0.5f - 10f, 230f, 20f), "All 10 waves cleared!");
             return;
         }
 
         if (!gameWon && !finalWaveTimeEnded)
         {
-            GUI.Box(new Rect(10f, 105f, 240f, 70f), "Wave");
-            GUI.Label(new Rect(20f, 130f, 220f, 20f), "Wave: " + currentWave + " / " + totalWaves);
-            GUI.Label(new Rect(20f, 150f, 220f, 20f), "Time: " + waveElapsedTime.ToString("F1") + " / " + waveDuration.ToString("F0"));
+            DrawWaveHud();
+        }
+    }
+
+    private void DrawWaveHud()
+    {
+        float remainingTime = Mathf.Max(0f, waveDuration - waveElapsedTime);
+        Rect waveRect = new Rect(Screen.width * 0.5f - 170f, 10f, 340f, 74f);
+
+        GUIStyle boxStyle = new GUIStyle(GUI.skin.box);
+        boxStyle.fontSize = 18;
+        boxStyle.fontStyle = FontStyle.Bold;
+        boxStyle.alignment = TextAnchor.UpperCenter;
+
+        GUIStyle labelStyle = new GUIStyle(GUI.skin.label);
+        labelStyle.fontSize = 14;
+        labelStyle.alignment = TextAnchor.MiddleCenter;
+
+        Color oldColor = GUI.color;
+        GUI.color = new Color(0.2f, 0.62f, 1f, 0.92f);
+        GUI.Box(waveRect, "WAVE " + currentWave + " / " + totalWaves, boxStyle);
+        GUI.color = oldColor;
+
+        GUI.Label(new Rect(waveRect.x + 10f, waveRect.y + 30f, waveRect.width - 20f, 20f),
+            "Next wave in " + remainingTime.ToString("F0") + "s", labelStyle);
+        GUI.Label(new Rect(waveRect.x + 10f, waveRect.y + 50f, waveRect.width - 20f, 20f),
+            "Wave progress is time-based, not player level.", labelStyle);
+
+        if (Time.time <= waveBannerUntil)
+        {
+            GUIStyle bannerStyle = new GUIStyle(GUI.skin.box);
+            bannerStyle.fontSize = 28;
+            bannerStyle.fontStyle = FontStyle.Bold;
+            bannerStyle.alignment = TextAnchor.MiddleCenter;
+
+            string bannerText = waveBannerRestoredHealth
+                ? "WAVE " + currentWave + " START\nHP RESTORED"
+                : "WAVE " + currentWave + " START\nSURVIVE UNTIL TIMER ENDS";
+
+            GUI.color = new Color(0.1f, 0.45f, 0.95f, 0.86f);
+            GUI.Box(new Rect(Screen.width * 0.5f - 210f, Screen.height * 0.5f - 56f, 420f, 112f),
+                bannerText, bannerStyle);
+            GUI.color = oldColor;
         }
     }
 }

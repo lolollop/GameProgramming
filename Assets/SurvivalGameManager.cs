@@ -34,9 +34,18 @@ public class SurvivalGameManager : MonoBehaviour
     {
         Time.timeScale = 1f;
         player = FindObjectOfType<PlayerController>();
+
         if (player != null)
         {
             player.PlayerDied += OnPlayerDied;
+        }
+    }
+
+    private void Update()
+    {
+        if (player == null)
+        {
+            player = FindObjectOfType<PlayerController>();
         }
     }
 
@@ -46,6 +55,7 @@ public class SurvivalGameManager : MonoBehaviour
         {
             player.PlayerDied -= OnPlayerDied;
         }
+
     }
 
     private void OnGUI()
@@ -57,7 +67,7 @@ public class SurvivalGameManager : MonoBehaviour
 
         GUI.Box(new Rect(10f, 10f, 240f, 90f), "Battle");
         GUI.Label(new Rect(20f, 35f, 220f, 20f), "HP: " + player.CurrentHealth + " / " + player.MaxHealth);
-        GUI.Label(new Rect(20f, 55f, 220f, 20f), "Level: " + player.CurrentLevel);
+        GUI.Label(new Rect(20f, 55f, 220f, 20f), "Player Lv: " + player.CurrentLevel);
         GUI.Label(new Rect(20f, 75f, 220f, 20f), "EXP: " + player.CurrentExperience + " / " + player.ExperienceToNextLevel);
 
         if (playerDead)

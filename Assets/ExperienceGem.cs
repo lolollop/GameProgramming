@@ -9,6 +9,9 @@ public class ExperienceGem : MonoBehaviour
     [SerializeField] private float colliderRadius = 0.18f;
     [SerializeField] private Color gemColor = new Color(0.25f, 1f, 0.45f, 1f);
 
+    private PlayerController player;
+    private bool collected;
+
     public static ExperienceGem Create(Vector3 position, int amount)
     {
         GameObject gemObject = new GameObject("ExperienceGem");
@@ -32,19 +35,49 @@ public class ExperienceGem : MonoBehaviour
 
     protected void Start()
     {
+        FindPlayer();
         Destroy(gameObject, lifetime);
     }
 
-    protected void OnTriggerEnter2D(Collider2D other)
+    private void Update()
     {
-        PlayerController player = other.GetComponent<PlayerController>();
+        if (collected)
+        {
+            return;
+        }
+
+        if (player == null)
+        {
+            FindPlayer();
+        }
+
         if (player == null)
         {
             return;
         }
 
-        player.GainExperience(experienceAmount);
-        Destroy(gameObject);
+        float pickupRadius = player.ExperiencePickupRadius;
+        if (pickupRadius <= 0f)
+        {
+            return;
+        }
+
+        Vector2 toPlayer = player.transform.position - transform.position;
+        if (toPlayer.sqrMagnitude <= pickupRadius * pickupRadius)
+        {
+            Collect(player);
+        }
+    }
+
+    protected void OnTriggerEnter2D(Collider2D other)
+    {
+        PlayerController touchingPlayer = other.GetComponent<PlayerController>();
+        if (touchingPlayer == null)
+        {
+            return;
+        }
+
+        Collect(touchingPlayer);
     }
 
     private void EnsureVisual()
@@ -74,6 +107,27 @@ public class ExperienceGem : MonoBehaviour
 
         circleCollider.isTrigger = true;
         circleCollider.radius = colliderRadius;
+    }
+
+    private void Collect(PlayerController collectingPlayer)
+    {
+        if (collected)
+        {
+            return;
+        }
+
+        collected = true;
+        collectingPlayer.GainExperience(experienceAmount);
+        Destroy(gameObject);
+    }
+
+    private void FindPlayer()
+    {
+        GameObject playerObject = GameObject.FindGameObjectWithTag("Player");
+        if (playerObject != null)
+        {
+            player = playerObject.GetComponent<PlayerController>();
+        }
     }
 
     private static Sprite GetGemSprite()

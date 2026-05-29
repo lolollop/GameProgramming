@@ -133,6 +133,7 @@ GameObject:
   - component: {fileID: 519420032}
   - component: {fileID: 519420031}
   - component: {fileID: 519420029}
+  - component: {fileID: 519420033}
   m_Layer: 0
   m_Name: Main Camera
   m_TagString: MainCamera
@@ -183,7 +184,7 @@ Camera:
   far clip plane: 1000
   field of view: 60
   orthographic: 1
-  orthographic size: 5
+  orthographic size: 3.2
   m_Depth: -1
   m_CullingMask:
     serializedVersion: 2
@@ -214,6 +215,22 @@ Transform:
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &519420033
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 519420028}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: d18e076fe708cd740acc5827a8c285e0, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  target: {fileID: 598981437}
+  followSmoothTime: 0.12
+  orthographicSize: 3.2
+  offset: {x: 0, y: 0, z: -10}
 --- !u!1 &598981432
 GameObject:
   m_ObjectHideFlags: 0
@@ -261,6 +278,9 @@ MonoBehaviour:
     startLevel: 1
     experienceToFirstLevel: 5
     experienceGrowth: 1.35
+    experiencePickupRadius: 0.35
+    pickupRangeIncrease: 0.75
+    maxExperiencePickupRadius: 4
   bulletPrefab: {fileID: 1419395251236569288, guid: 493836b36291bec41b92f262aff066ea, type: 3}
   firePoint: {fileID: 836876911}
   aimAssistStrength: 0
@@ -399,7 +419,7 @@ Transform:
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
   m_LocalPosition: {x: 0, y: 0, z: 0}
-  m_LocalScale: {x: 0.12, y: 0.12, z: 1}
+  m_LocalScale: {x: 0.1, y: 0.1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children:
   - {fileID: 836876911}
@@ -611,7 +631,9 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   totalWaves: 10
-  waveDuration: 60
+  waveDuration: 40
+  waveStartInvulnerability: 1.5
+  waveStartBannerDuration: 2.5
   enemyTier1Prefab: {fileID: 6225847038429101682, guid: 73341b6bc697c984f8bdc6b35c4a2de8, type: 3}
   enemyTier2Prefab: {fileID: 6225847038429101682, guid: 7624ddefb9758dc47975dd2ddedfd3cd, type: 3}
   enemyTier3Prefab: {fileID: 6225847038429101682, guid: 6c4b4cbbdf7693c4b9decb5259f02291, type: 3}
