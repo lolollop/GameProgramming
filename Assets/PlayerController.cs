@@ -9,6 +9,10 @@ public class PlayerCombatConfig
     public float fireInterval = 0.5f;
     public int bulletDamage = 1;
     public float bulletSpeed = 10f;
+    public int projectilesPerShot = 1;
+    public float multishotAngle = 15f;
+    public float bulletScaleMultiplier = 1f;
+    public int bulletDamageMultiplier = 1;
 }
 
 [Serializable]
@@ -21,9 +25,9 @@ public class PlayerProgressionConfig
 
 public enum UpgradeType
 {
-    Damage,
     FireRate,
-    MaxHealth
+    Multishot,
+    GiantBullet
 }
 
 public class LevelUpOption
@@ -42,10 +46,11 @@ public class PlayerController : MonoBehaviour
     [Header("Shooting")]
     public GameObject bulletPrefab;
     public Transform firePoint;
-    [Range(0f, 1f)] public float aimAssistStrength = 0.40f;
+    [Range(0f, 1f)] public float aimAssistStrength = 0f;
     public float aimAssistAngle = 30f;
 
     private Rigidbody2D rb;
+    private DirectionalSprite2D directionalSprite;
     private Vector2 movement;
     private Vector2 mousePos;
     private float nextFireTime;
@@ -55,6 +60,7 @@ public class PlayerController : MonoBehaviour
     private int experienceToNextLevel;
     private bool inputLocked;
     private bool isDead;
+    private float lastHorizontalFacing = 1f;
 
     public event Action<PlayerController> StatsChanged;
     public event Action<LevelUpOption[]> LevelUpOffered;
@@ -69,12 +75,16 @@ public class PlayerController : MonoBehaviour
     public float FireInterval { get { return combatConfig.fireInterval; } }
     public int BulletDamage { get { return combatConfig.bulletDamage; } }
     public float BulletSpeed { get { return combatConfig.bulletSpeed; } }
+    public int ProjectilesPerShot { get { return combatConfig.projectilesPerShot; } }
+    public float BulletScaleMultiplier { get { return combatConfig.bulletScaleMultiplier; } }
+    public int BulletDamageMultiplier { get { return combatConfig.bulletDamageMultiplier; } }
     public bool IsDead { get { return isDead; } }
     public bool IsInputLocked { get { return inputLocked; } }
 
     private void Start()
     {
         rb = GetComponent<Rigidbody2D>();
+        directionalSprite = GetComponent<DirectionalSprite2D>();
         currentHealth = combatConfig.maxHealth;
         currentLevel = Mathf.Max(1, progressionConfig.startLevel);
         experienceToNextLevel = Mathf.Max(1, progressionConfig.experienceToFirstLevel);
@@ -91,7 +101,9 @@ public class PlayerController : MonoBehaviour
 
         movement.x = Input.GetAxisRaw("Horizontal");
         movement.y = Input.GetAxisRaw("Vertical");
-        mousePos = Camera.main.ScreenToWorldPoint(Input.mousePosition);
+        mousePos = GetMouseWorldPosition();
+        UpdateFacingFromInput();
+        UpdateAimDirection();
 
         if (inputLocked)
         {
@@ -114,9 +126,10 @@ public class PlayerController : MonoBehaviour
 
         rb.MovePosition(rb.position + movement.normalized * combatConfig.moveSpeed * Time.fixedDeltaTime);
 
-        Vector2 lookDir = mousePos - rb.position;
-        float angle = Mathf.Atan2(lookDir.y, lookDir.x) * Mathf.Rad2Deg - 90f;
-        rb.rotation = angle;
+        if (directionalSprite != null)
+        {
+            directionalSprite.SetFacing(lastHorizontalFacing);
+        }
     }
 
     public void TakeDamage(int damage)
@@ -155,7 +168,7 @@ public class PlayerController : MonoBehaviour
 
         currentExperience += amount;
 
-        while (currentExperience >= experienceToNextLevel)
+        if (!inputLocked && currentExperience >= experienceToNextLevel)
         {
             currentExperience -= experienceToNextLevel;
             LevelUp();
@@ -168,15 +181,15 @@ public class PlayerController : MonoBehaviour
     {
         switch (upgradeType)
         {
-            case UpgradeType.Damage:
-                combatConfig.bulletDamage += 1;
-                break;
             case UpgradeType.FireRate:
                 combatConfig.fireInterval = Mathf.Max(0.1f, combatConfig.fireInterval * 0.85f);
                 break;
-            case UpgradeType.MaxHealth:
-                combatConfig.maxHealth += 3;
-                currentHealth += 3;
+            case UpgradeType.Multishot:
+                combatConfig.projectilesPerShot += 2;
+                break;
+            case UpgradeType.GiantBullet:
+                combatConfig.bulletScaleMultiplier *= 1.5f;
+                combatConfig.bulletDamageMultiplier *= 2;
                 break;
         }
 
@@ -190,26 +203,63 @@ public class PlayerController : MonoBehaviour
 
     private void Shoot()
     {
-        if (bulletPrefab == null || firePoint == null)
+        if (bulletPrefab == null)
         {
             return;
         }
 
-        Vector2 mouseDirection = (mousePos - (Vector2)firePoint.position).normalized;
+        Vector2 currentMousePos = GetMouseWorldPosition();
+        Vector2 origin = firePoint != null
+            ? (Vector2)firePoint.position
+            : (rb != null ? rb.position : (Vector2)transform.position);
+        Vector2 mouseDirection = firePoint != null
+            ? ((Vector2)firePoint.right).normalized
+            : (currentMousePos - origin).normalized;
         if (mouseDirection.sqrMagnitude <= 0.0001f)
         {
-            mouseDirection = transform.up;
+            mouseDirection = firePoint != null ? (Vector2)firePoint.right : Vector2.right;
         }
 
-        Vector2 finalDirection = GetAimAssistDirection(mouseDirection);
-        float bulletAngle = Mathf.Atan2(finalDirection.y, finalDirection.x) * Mathf.Rad2Deg - 90f;
-        Quaternion bulletRotation = Quaternion.Euler(0f, 0f, bulletAngle);
+        Vector2 finalDirection = GetAimAssistDirection(mouseDirection, origin);
+        FireProjectileSpread(origin, finalDirection);
+    }
 
-        GameObject bulletObject = Instantiate(bulletPrefab, firePoint.position, bulletRotation);
+    private void FireProjectileSpread(Vector2 spawnPosition, Vector2 centerDirection)
+    {
+        int projectileCount = Mathf.Max(1, combatConfig.projectilesPerShot);
+        if (projectileCount == 1)
+        {
+            FireBullet(spawnPosition, centerDirection);
+            return;
+        }
+
+        float spreadAngle = Mathf.Abs(combatConfig.multishotAngle);
+        float angleStep = spreadAngle * 2f / (projectileCount - 1);
+        for (int i = 0; i < projectileCount; i++)
+        {
+            float angleOffset = -spreadAngle + angleStep * i;
+            FireBullet(spawnPosition, RotateDirection(centerDirection, angleOffset));
+        }
+    }
+
+    private void FireBullet(Vector2 spawnPosition, Vector2 direction)
+    {
+        float bulletAngle = Mathf.Atan2(direction.y, direction.x) * Mathf.Rad2Deg;
+        Quaternion bulletRotation = Quaternion.Euler(0f, 0f, bulletAngle);
+        GameObject bulletObject = Instantiate(bulletPrefab, spawnPosition, bulletRotation);
+        bulletObject.transform.right = direction;
+
+        Vector3 baseScale = bulletObject.transform.localScale;
+        bulletObject.transform.localScale = new Vector3(
+            baseScale.x * combatConfig.bulletScaleMultiplier,
+            baseScale.y * combatConfig.bulletScaleMultiplier,
+            baseScale.z);
+
         Bullet bullet = bulletObject.GetComponent<Bullet>();
         if (bullet != null)
         {
-            bullet.Initialize(combatConfig.bulletSpeed, combatConfig.bulletDamage);
+            int finalDamage = combatConfig.bulletDamage * combatConfig.bulletDamageMultiplier;
+            bullet.Initialize(combatConfig.bulletSpeed, finalDamage, direction);
         }
     }
 
@@ -219,9 +269,9 @@ public class PlayerController : MonoBehaviour
         experienceToNextLevel = Mathf.CeilToInt(experienceToNextLevel * progressionConfig.experienceGrowth);
 
         LevelUpOption[] options = new LevelUpOption[3];
-        options[0] = BuildOption(UpgradeType.Damage);
-        options[1] = BuildOption(UpgradeType.FireRate);
-        options[2] = BuildOption(UpgradeType.MaxHealth);
+        options[0] = BuildOption(UpgradeType.FireRate);
+        options[1] = BuildOption(UpgradeType.Multishot);
+        options[2] = BuildOption(UpgradeType.GiantBullet);
 
         inputLocked = true;
 
@@ -238,17 +288,17 @@ public class PlayerController : MonoBehaviour
 
         switch (type)
         {
-            case UpgradeType.Damage:
-                option.Title = "Power Shot";
-                option.Description = "Bullet damage +1";
-                break;
             case UpgradeType.FireRate:
-                option.Title = "Quick Hands";
+                option.Title = "Fire Rate Up";
                 option.Description = "Fire interval reduced by 15%";
                 break;
+            case UpgradeType.Multishot:
+                option.Title = "Multishot";
+                option.Description = "Shoot forward plus two extra bullets at +/-15 degrees";
+                break;
             default:
-                option.Title = "Tough Skin";
-                option.Description = "Max health +3 and heal 3";
+                option.Title = "Giant Bullet";
+                option.Description = "Bullet scale x1.5 and damage x2";
                 break;
         }
 
@@ -276,7 +326,7 @@ public class PlayerController : MonoBehaviour
         }
     }
 
-    private Vector2 GetAimAssistDirection(Vector2 mouseDirection)
+    private Vector2 GetAimAssistDirection(Vector2 mouseDirection, Vector2 origin)
     {
         Enemy[] enemies = FindObjectsOfType<Enemy>();
         Enemy bestEnemy = null;
@@ -285,7 +335,7 @@ public class PlayerController : MonoBehaviour
         for (int i = 0; i < enemies.Length; i++)
         {
             Enemy enemy = enemies[i];
-            Vector2 toEnemy = (Vector2)enemy.transform.position - (Vector2)firePoint.position;
+            Vector2 toEnemy = (Vector2)enemy.transform.position - origin;
             if (toEnemy.sqrMagnitude <= 0.0001f)
             {
                 continue;
@@ -310,7 +360,59 @@ public class PlayerController : MonoBehaviour
             return mouseDirection;
         }
 
-        Vector2 enemyDirection = ((Vector2)bestEnemy.transform.position - (Vector2)firePoint.position).normalized;
+        Vector2 enemyDirection = ((Vector2)bestEnemy.transform.position - origin).normalized;
         return Vector2.Lerp(mouseDirection, enemyDirection, aimAssistStrength).normalized;
     }
+
+    private Vector2 RotateDirection(Vector2 direction, float degrees)
+    {
+        float radians = degrees * Mathf.Deg2Rad;
+        float sin = Mathf.Sin(radians);
+        float cos = Mathf.Cos(radians);
+        return new Vector2(
+            direction.x * cos - direction.y * sin,
+            direction.x * sin + direction.y * cos).normalized;
+    }
+
+    private void UpdateFacingFromInput()
+    {
+        if (Input.GetKeyDown(KeyCode.A) || Input.GetKeyDown(KeyCode.LeftArrow))
+        {
+            lastHorizontalFacing = -1f;
+        }
+        else if (Input.GetKeyDown(KeyCode.D) || Input.GetKeyDown(KeyCode.RightArrow))
+        {
+            lastHorizontalFacing = 1f;
+        }
+    }
+
+    private Vector2 GetMouseWorldPosition()
+    {
+        Camera cam = Camera.main;
+        if (cam == null)
+        {
+            return mousePos;
+        }
+
+        Vector3 screenPos = Input.mousePosition;
+        screenPos.z = -cam.transform.position.z;
+        Vector3 worldPos = cam.ScreenToWorldPoint(screenPos);
+        return new Vector2(worldPos.x, worldPos.y);
+    }
+
+    private void UpdateAimDirection()
+    {
+        if (firePoint == null)
+        {
+            return;
+        }
+
+        Vector2 aimOrigin = firePoint.position;
+        Vector2 lookDir = mousePos - aimOrigin;
+        if (lookDir.sqrMagnitude > 0.0001f)
+        {
+            firePoint.right = lookDir.normalized;
+        }
+    }
+
 }

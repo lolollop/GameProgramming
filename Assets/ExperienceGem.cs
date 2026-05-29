@@ -1,0 +1,108 @@
+using UnityEngine;
+
+public class ExperienceGem : MonoBehaviour
+{
+    private static Sprite cachedGemSprite;
+
+    [SerializeField] private int experienceAmount = 1;
+    [SerializeField] private float lifetime = 20f;
+    [SerializeField] private float colliderRadius = 0.18f;
+    [SerializeField] private Color gemColor = new Color(0.25f, 1f, 0.45f, 1f);
+
+    public static ExperienceGem Create(Vector3 position, int amount)
+    {
+        GameObject gemObject = new GameObject("ExperienceGem");
+        gemObject.transform.position = position;
+
+        ExperienceGem gem = gemObject.AddComponent<ExperienceGem>();
+        gem.Initialize(amount);
+        return gem;
+    }
+
+    public void Initialize(int amount)
+    {
+        experienceAmount = Mathf.Max(1, amount);
+    }
+
+    protected void Awake()
+    {
+        EnsureVisual();
+        EnsureCollider();
+    }
+
+    protected void Start()
+    {
+        Destroy(gameObject, lifetime);
+    }
+
+    protected void OnTriggerEnter2D(Collider2D other)
+    {
+        PlayerController player = other.GetComponent<PlayerController>();
+        if (player == null)
+        {
+            return;
+        }
+
+        player.GainExperience(experienceAmount);
+        Destroy(gameObject);
+    }
+
+    private void EnsureVisual()
+    {
+        SpriteRenderer spriteRenderer = GetComponent<SpriteRenderer>();
+        if (spriteRenderer == null)
+        {
+            spriteRenderer = gameObject.AddComponent<SpriteRenderer>();
+        }
+
+        if (spriteRenderer.sprite == null)
+        {
+            spriteRenderer.sprite = GetGemSprite();
+        }
+
+        spriteRenderer.color = gemColor;
+        spriteRenderer.sortingOrder = 5;
+    }
+
+    private void EnsureCollider()
+    {
+        CircleCollider2D circleCollider = GetComponent<CircleCollider2D>();
+        if (circleCollider == null)
+        {
+            circleCollider = gameObject.AddComponent<CircleCollider2D>();
+        }
+
+        circleCollider.isTrigger = true;
+        circleCollider.radius = colliderRadius;
+    }
+
+    private static Sprite GetGemSprite()
+    {
+        if (cachedGemSprite != null)
+        {
+            return cachedGemSprite;
+        }
+
+        const int size = 16;
+        Texture2D texture = new Texture2D(size, size);
+        texture.filterMode = FilterMode.Point;
+        texture.wrapMode = TextureWrapMode.Clamp;
+
+        Vector2 center = new Vector2((size - 1) * 0.5f, (size - 1) * 0.5f);
+        float radius = size * 0.42f;
+
+        for (int y = 0; y < size; y++)
+        {
+            for (int x = 0; x < size; x++)
+            {
+                float distance = Vector2.Distance(new Vector2(x, y), center);
+                texture.SetPixel(x, y, distance <= radius ? Color.white : Color.clear);
+            }
+        }
+
+        texture.Apply();
+        cachedGemSprite = Sprite.Create(texture, new Rect(0f, 0f, size, size), new Vector2(0.5f, 0.5f), 64f);
+        cachedGemSprite.name = "RuntimeExperienceGem";
+        return cachedGemSprite;
+    }
+}

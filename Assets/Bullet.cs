@@ -7,6 +7,8 @@ public class Bullet : MonoBehaviour
     [SerializeField] private float lifetime = 3f;
 
     private Rigidbody2D rb;
+    private Vector2 lockedDirection = Vector2.right;
+    private bool directionLocked;
 
     private void Awake()
     {
@@ -15,18 +17,42 @@ public class Bullet : MonoBehaviour
 
     private void Start()
     {
-        if (rb != null)
-        {
-            rb.velocity = transform.up * speed;
-        }
+        ApplyLockedVelocity();
 
         Destroy(gameObject, lifetime);
+    }
+
+    private void FixedUpdate()
+    {
+        // Keep bullet travel direction fixed after firing.
+        ApplyLockedVelocity();
     }
 
     public void Initialize(float bulletSpeed, int bulletDamage)
     {
         speed = bulletSpeed;
         damage = bulletDamage;
+        lockedDirection = ((Vector2)transform.right).normalized;
+        directionLocked = true;
+        ApplyLockedVelocity();
+    }
+
+    public void Initialize(float bulletSpeed, int bulletDamage, Vector2 direction)
+    {
+        speed = bulletSpeed;
+        damage = bulletDamage;
+        if (direction.sqrMagnitude > 0.0001f)
+        {
+            lockedDirection = direction.normalized;
+        }
+        else
+        {
+            lockedDirection = ((Vector2)transform.right).normalized;
+        }
+
+        directionLocked = true;
+        transform.right = lockedDirection;
+        ApplyLockedVelocity();
     }
 
     private void OnTriggerEnter2D(Collider2D hitInfo)
@@ -37,5 +63,22 @@ public class Bullet : MonoBehaviour
             enemy.TakeDamage(damage);
             Destroy(gameObject);
         }
+    }
+
+    private void ApplyLockedVelocity()
+    {
+        if (rb == null)
+        {
+            return;
+        }
+
+        if (!directionLocked)
+        {
+            lockedDirection = ((Vector2)transform.right).normalized;
+            directionLocked = true;
+        }
+
+        rb.velocity = lockedDirection * speed;
+        rb.angularVelocity = 0f;
     }
 }
