@@ -1,4 +1,5 @@
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
@@ -55,7 +56,12 @@ public class PlayerController : MonoBehaviour
     [Range(0f, 1f)] public float aimAssistStrength = 0f;
     public float aimAssistAngle = 30f;
 
+    [Header("Hit Feedback")]
+    [SerializeField] private Color hitFlashColor = new Color(1f, 0.18f, 0.18f, 1f);
+    [SerializeField] private float hitFlashDuration = 0.12f;
+
     private Rigidbody2D rb;
+    private SpriteRenderer spriteRenderer;
     private DirectionalSprite2D directionalSprite;
     private Vector2 movement;
     private Vector2 mousePos;
@@ -68,6 +74,8 @@ public class PlayerController : MonoBehaviour
     private bool isDead;
     private float lastHorizontalFacing = 1f;
     private float invulnerableUntil;
+    private Color defaultSpriteColor = Color.white;
+    private Coroutine hitFlashRoutine;
 
     public event Action<PlayerController> StatsChanged;
     public event Action<LevelUpOption[]> LevelUpOffered;
@@ -93,7 +101,13 @@ public class PlayerController : MonoBehaviour
     private void Start()
     {
         rb = GetComponent<Rigidbody2D>();
+        spriteRenderer = GetComponent<SpriteRenderer>();
         directionalSprite = GetComponent<DirectionalSprite2D>();
+        if (spriteRenderer != null)
+        {
+            defaultSpriteColor = spriteRenderer.color;
+        }
+
         currentHealth = combatConfig.maxHealth;
         currentLevel = Mathf.Max(1, progressionConfig.startLevel);
         experienceToNextLevel = Mathf.Max(1, progressionConfig.experienceToFirstLevel);
@@ -144,12 +158,13 @@ public class PlayerController : MonoBehaviour
 
     public void TakeDamage(int damage)
     {
-        if (isDead || IsInvulnerable)
+        if (isDead || IsInvulnerable || damage <= 0)
         {
             return;
         }
 
         currentHealth = Mathf.Max(0, currentHealth - damage);
+        PlayHitFlash();
         NotifyStatsChanged();
 
         if (currentHealth <= 0)
@@ -401,6 +416,34 @@ public class PlayerController : MonoBehaviour
         {
             PlayerDied();
         }
+    }
+
+    private void PlayHitFlash()
+    {
+        if (spriteRenderer == null || hitFlashDuration <= 0f)
+        {
+            return;
+        }
+
+        if (hitFlashRoutine != null)
+        {
+            StopCoroutine(hitFlashRoutine);
+        }
+
+        hitFlashRoutine = StartCoroutine(HitFlashRoutine());
+    }
+
+    private IEnumerator HitFlashRoutine()
+    {
+        spriteRenderer.color = hitFlashColor;
+        yield return new WaitForSecondsRealtime(hitFlashDuration);
+
+        if (spriteRenderer != null)
+        {
+            spriteRenderer.color = defaultSpriteColor;
+        }
+
+        hitFlashRoutine = null;
     }
 
     private void NotifyStatsChanged()
