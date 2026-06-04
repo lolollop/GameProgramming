@@ -212,6 +212,7 @@ public class WaveManager : MonoBehaviour
         }
 
         Vector3 spawnPosition = GetSpawnPosition();
+        spawnPosition = GameBounds2D.ClampToPlayArea(spawnPosition, 0.35f);
         GameObject enemyObject = Instantiate(prefab, spawnPosition, Quaternion.identity);
         ConfigureFallbackTier(enemyObject, tier);
     }

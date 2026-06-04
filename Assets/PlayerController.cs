@@ -60,6 +60,9 @@ public class PlayerController : MonoBehaviour
     [SerializeField] private Color hitFlashColor = new Color(1f, 0.18f, 0.18f, 1f);
     [SerializeField] private float hitFlashDuration = 0.12f;
 
+    [Header("Bounds")]
+    [SerializeField] private float boundsInset = 0.35f;
+
     private Rigidbody2D rb;
     private SpriteRenderer spriteRenderer;
     private DirectionalSprite2D directionalSprite;
@@ -148,7 +151,9 @@ public class PlayerController : MonoBehaviour
             return;
         }
 
-        rb.MovePosition(rb.position + movement.normalized * combatConfig.moveSpeed * Time.fixedDeltaTime);
+        Vector2 nextPosition = rb.position + movement.normalized * combatConfig.moveSpeed * Time.fixedDeltaTime;
+        nextPosition = GameBounds2D.ClampToPlayArea(nextPosition, boundsInset);
+        rb.MovePosition(nextPosition);
 
         if (directionalSprite != null)
         {

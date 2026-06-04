@@ -18,6 +18,9 @@ public class Enemy : MonoBehaviour
     [Header("Drops")]
     public GameObject experienceGemPrefab;
 
+    [Header("Bounds")]
+    [SerializeField] private float boundsInset = 0.35f;
+
     private Transform player;
     private DirectionalSprite2D directionalSprite;
     private int currentHealth;
@@ -42,7 +45,8 @@ public class Enemy : MonoBehaviour
             return;
         }
 
-        transform.position = Vector2.MoveTowards(transform.position, player.position, config.moveSpeed * Time.deltaTime);
+        Vector2 nextPosition = Vector2.MoveTowards(transform.position, player.position, config.moveSpeed * Time.deltaTime);
+        transform.position = GameBounds2D.ClampToPlayArea(nextPosition, boundsInset);
 
         if (directionalSprite != null)
         {

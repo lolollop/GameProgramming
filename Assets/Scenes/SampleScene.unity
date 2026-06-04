@@ -285,6 +285,9 @@ MonoBehaviour:
   firePoint: {fileID: 836876911}
   aimAssistStrength: 0
   aimAssistAngle: 30
+  hitFlashColor: {r: 1, g: 0.18, b: 0.18, a: 1}
+  hitFlashDuration: 0.12
+  boundsInset: 0.35
 --- !u!61 &598981434
 BoxCollider2D:
   m_ObjectHideFlags: 0
@@ -482,6 +485,7 @@ GameObject:
   m_Component:
   - component: {fileID: 1161347512}
   - component: {fileID: 1161347511}
+  - component: {fileID: 1161347513}
   m_Layer: 0
   m_Name: Ground
   m_TagString: Untagged
@@ -556,6 +560,20 @@ Transform:
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &1161347513
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1161347510}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 96a9d037c82af83498dca198e1239337, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  boundsSource: {fileID: 1161347511}
+  edgePadding: 0.15
 --- !u!1 &1595839936
 GameObject:
   m_ObjectHideFlags: 0
