@@ -18,12 +18,18 @@ public class WaveManager : MonoBehaviour
 
     [Header("Spawn")]
     [SerializeField] private float fallbackSpawnDistanceFromPlayer = 10f;
-    [SerializeField] private float stage1SpawnInterval = 1.5f;
-    [SerializeField] private float stage2SpawnInterval = 1f;
-    [SerializeField] private float stage3SpawnInterval = 0.65f;
-    [SerializeField] private int stage1MaxAlive = 30;
-    [SerializeField] private int stage2MaxAlive = 50;
-    [SerializeField] private int stage3MaxAlive = 75;
+    [SerializeField] private float stage1SpawnInterval = 2.2f;
+    [SerializeField] private float stage2SpawnInterval = 1.45f;
+    [SerializeField] private float stage3SpawnInterval = 1.05f;
+    [SerializeField] private int stage1MaxAlive = 18;
+    [SerializeField] private int stage2MaxAlive = 28;
+    [SerializeField] private int stage3MaxAlive = 42;
+
+    [Header("Player Level Spawn Scaling")]
+    [SerializeField] private float spawnIntervalReductionPerPlayerLevel = 0.035f;
+    [SerializeField] private float maxSpawnIntervalReductionFromLevel = 0.3f;
+    [SerializeField] private int extraMaxAliveEveryPlayerLevels = 2;
+    [SerializeField] private int maxAliveBonusFromPlayerLevel = 8;
 
     [Header("Victory UI")]
     [SerializeField] private GameObject victoryUIRoot;
@@ -255,22 +261,47 @@ public class WaveManager : MonoBehaviour
 
     private float GetCurrentSpawnInterval()
     {
+        float baseInterval;
         if (currentWave <= 3)
         {
-            return stage1SpawnInterval;
+            baseInterval = stage1SpawnInterval;
+        }
+        else
+        {
+            baseInterval = currentWave <= 7 ? stage2SpawnInterval : stage3SpawnInterval;
         }
 
-        return currentWave <= 7 ? stage2SpawnInterval : stage3SpawnInterval;
+        return Mathf.Max(0.45f, baseInterval * GetPlayerLevelSpawnMultiplier());
     }
 
     private int GetCurrentMaxAlive()
     {
+        int baseMaxAlive;
         if (currentWave <= 3)
         {
-            return stage1MaxAlive;
+            baseMaxAlive = stage1MaxAlive;
+        }
+        else
+        {
+            baseMaxAlive = currentWave <= 7 ? stage2MaxAlive : stage3MaxAlive;
         }
 
-        return currentWave <= 7 ? stage2MaxAlive : stage3MaxAlive;
+        int levelsPerBonus = Mathf.Max(1, extraMaxAliveEveryPlayerLevels);
+        int levelBonus = GetPlayerLevelIndex() / levelsPerBonus;
+        levelBonus = Mathf.Min(maxAliveBonusFromPlayerLevel, levelBonus);
+        return baseMaxAlive + levelBonus;
+    }
+
+    private float GetPlayerLevelSpawnMultiplier()
+    {
+        float reduction = GetPlayerLevelIndex() * spawnIntervalReductionPerPlayerLevel;
+        reduction = Mathf.Clamp(reduction, 0f, maxSpawnIntervalReductionFromLevel);
+        return 1f - reduction;
+    }
+
+    private int GetPlayerLevelIndex()
+    {
+        return player != null ? Mathf.Max(0, player.CurrentLevel - 1) : 0;
     }
 
     private Vector3 GetSpawnPosition()

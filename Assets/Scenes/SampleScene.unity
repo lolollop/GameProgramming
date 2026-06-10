@@ -656,12 +656,16 @@ MonoBehaviour:
   enemyTier2Prefab: {fileID: 6225847038429101682, guid: 7624ddefb9758dc47975dd2ddedfd3cd, type: 3}
   enemyTier3Prefab: {fileID: 6225847038429101682, guid: 6c4b4cbbdf7693c4b9decb5259f02291, type: 3}
   fallbackSpawnDistanceFromPlayer: 10
-  stage1SpawnInterval: 1.5
-  stage2SpawnInterval: 1
-  stage3SpawnInterval: 0.65
-  stage1MaxAlive: 30
-  stage2MaxAlive: 50
-  stage3MaxAlive: 75
+  stage1SpawnInterval: 2.2
+  stage2SpawnInterval: 1.45
+  stage3SpawnInterval: 1.05
+  stage1MaxAlive: 18
+  stage2MaxAlive: 28
+  stage3MaxAlive: 42
+  spawnIntervalReductionPerPlayerLevel: 0.035
+  maxSpawnIntervalReductionFromLevel: 0.3
+  extraMaxAliveEveryPlayerLevels: 2
+  maxAliveBonusFromPlayerLevel: 8
   victoryUIRoot: {fileID: 0}
 --- !u!4 &2003881335
 Transform:
