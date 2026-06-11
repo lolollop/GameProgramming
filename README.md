@@ -4,7 +4,7 @@
 
 This project is a small 2D top-down survivor shooter developed in Unity for the Game Programming module.
 
-The game is inspired by the core loop of survivor-style games: the player moves around an arena, automatically shoots toward the mouse direction, defeats enemies, collects experience gems, chooses upgrades, and tries to survive a sequence of enemy waves.
+The game is a 2D top-down wave survival shooter. The player moves around a limited arena, automatically fires toward the mouse direction, defeats enemies, collects experience, and chooses upgrades to survive increasingly difficult waves.
 
 The aim of the project is to create a focused vertical slice rather than a large unfinished game. The final result demonstrates a complete playable loop with movement, combat, enemy behaviour, experience progression, upgrades, wave-based pacing, player feedback, camera movement, and map boundaries.
 
