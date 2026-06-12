@@ -3,6 +3,7 @@ using UnityEngine;
 using UnityEditor;
 #endif
 
+// Controls wave timing, enemy spawning, difficulty pacing, and victory state.
 public class WaveManager : MonoBehaviour
 {
     [Header("Wave")]
@@ -82,6 +83,7 @@ public class WaveManager : MonoBehaviour
             victoryUIRoot.SetActive(false);
         }
 
+        // First wave starts without healing because the player already begins at full HP.
         BeginWave(false);
     }
 
@@ -96,6 +98,7 @@ public class WaveManager : MonoBehaviour
 
         if (finalWaveTimeEnded)
         {
+            // After the final timer ends, victory waits until all remaining enemies are cleared.
             if (FindObjectsOfType<Enemy>().Length == 0)
             {
                 ShowVictory();
@@ -107,6 +110,7 @@ public class WaveManager : MonoBehaviour
         waveElapsedTime += Time.deltaTime;
         if (waveElapsedTime >= waveDuration)
         {
+            // Wave progress is time-based, separate from player level.
             AdvanceWaveOrWaitForVictory();
             return;
         }
@@ -120,6 +124,7 @@ public class WaveManager : MonoBehaviour
 
     private void EnsureEnemyPrefabs()
     {
+        // Editor fallback keeps the spawner usable even if prefab references are missing.
 #if UNITY_EDITOR
         if (enemyTier1Prefab == null)
         {
@@ -168,6 +173,7 @@ public class WaveManager : MonoBehaviour
 
         if (restorePlayerHealth)
         {
+            // WaveManager is the single source of truth for wave-start healing.
             RestorePlayerHealthForNewWave();
         }
 
@@ -207,6 +213,7 @@ public class WaveManager : MonoBehaviour
 
         if (FindObjectsOfType<Enemy>().Length >= GetCurrentMaxAlive())
         {
+            // Enemy cap prevents late waves from filling the screen unfairly.
             return;
         }
 
@@ -218,6 +225,7 @@ public class WaveManager : MonoBehaviour
         }
 
         Vector3 spawnPosition = GetSpawnPosition();
+        // Spawns are clamped so enemies never appear outside the playable map.
         spawnPosition = GameBounds2D.ClampToPlayArea(spawnPosition, 0.35f);
         GameObject enemyObject = Instantiate(prefab, spawnPosition, Quaternion.identity);
         ConfigureFallbackTier(enemyObject, tier);
@@ -225,6 +233,7 @@ public class WaveManager : MonoBehaviour
 
     private int ChooseEnemyTier()
     {
+        // Enemy variety is introduced gradually as waves progress.
         if (currentWave <= 3)
         {
             return 1;
@@ -261,6 +270,7 @@ public class WaveManager : MonoBehaviour
 
     private float GetCurrentSpawnInterval()
     {
+        // Base spawn speed comes from the wave stage, then player level gently scales it.
         float baseInterval;
         if (currentWave <= 3)
         {
@@ -276,6 +286,7 @@ public class WaveManager : MonoBehaviour
 
     private int GetCurrentMaxAlive()
     {
+        // Max alive count scales slowly with player level but remains capped.
         int baseMaxAlive;
         if (currentWave <= 3)
         {
@@ -294,6 +305,7 @@ public class WaveManager : MonoBehaviour
 
     private float GetPlayerLevelSpawnMultiplier()
     {
+        // Lower interval means faster spawning; reduction is capped for fair difficulty.
         float reduction = GetPlayerLevelIndex() * spawnIntervalReductionPerPlayerLevel;
         reduction = Mathf.Clamp(reduction, 0f, maxSpawnIntervalReductionFromLevel);
         return 1f - reduction;
@@ -306,6 +318,7 @@ public class WaveManager : MonoBehaviour
 
     private Vector3 GetSpawnPosition()
     {
+        // Prefer spawning just outside the camera view so enemies enter from off-screen.
         Camera cam = Camera.main;
         if (cam != null)
         {
@@ -347,6 +360,7 @@ public class WaveManager : MonoBehaviour
 
     private void ConfigureFallbackTier(GameObject enemyObject, int tier)
     {
+        // If tier prefabs are missing, reuse Tier 1 and adjust stats/colors at runtime.
         bool usingFallbackTier2 = tier == 2 && enemyTier2Prefab == null;
         bool usingFallbackTier3 = tier == 3 && enemyTier3Prefab == null;
         if (!usingFallbackTier2 && !usingFallbackTier3)
@@ -389,6 +403,7 @@ public class WaveManager : MonoBehaviour
 
     private void ShowVictory()
     {
+        // Stop the run when the final wave is cleared.
         gameWon = true;
         if (victoryUIRoot != null)
         {
@@ -415,6 +430,7 @@ public class WaveManager : MonoBehaviour
 
     private void DrawWaveHud()
     {
+        // Wave UI is intentionally separate from the player level HUD.
         float remainingTime = Mathf.Max(0f, waveDuration - waveElapsedTime);
         Rect waveRect = new Rect(Screen.width * 0.5f - 170f, 10f, 340f, 74f);
 

@@ -1,5 +1,6 @@
 using UnityEngine;
 
+// Keeps the camera zoomed in and smoothly centered on the player.
 public class CameraFollow2D : MonoBehaviour
 {
     [SerializeField] private Transform target;
@@ -24,6 +25,7 @@ public class CameraFollow2D : MonoBehaviour
 
     private void LateUpdate()
     {
+        // LateUpdate follows after player movement, which makes camera motion smoother.
         FindTargetIfNeeded();
         ApplyZoom();
 
@@ -42,6 +44,7 @@ public class CameraFollow2D : MonoBehaviour
 
     private void FindTargetIfNeeded()
     {
+        // Allows the camera to work even if the target was not assigned in the Inspector.
         if (target != null)
         {
             return;

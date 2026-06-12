@@ -1,5 +1,6 @@
 using UnityEngine;
 
+// Moves a projectile in one fixed direction and applies damage on enemy hit.
 public class Bullet : MonoBehaviour
 {
     [SerializeField] private float speed = 10f;
@@ -57,6 +58,7 @@ public class Bullet : MonoBehaviour
 
     private void OnTriggerEnter2D(Collider2D hitInfo)
     {
+        // Bullets only care about enemies; other trigger contacts are ignored.
         Enemy enemy = hitInfo.GetComponent<Enemy>();
         if (enemy != null)
         {

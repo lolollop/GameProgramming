@@ -1,6 +1,7 @@
 using UnityEngine;
 
 [RequireComponent(typeof(Renderer))]
+// Provides a shared rectangular play area based on a renderer's world bounds.
 public class GameBounds2D : MonoBehaviour
 {
     public static GameBounds2D Instance { get; private set; }
@@ -19,6 +20,7 @@ public class GameBounds2D : MonoBehaviour
 
     public Vector2 ClampPosition(Vector2 position, float extraInset = 0f)
     {
+        // Extra inset keeps larger objects slightly away from the visual edge.
         if (boundsSource == null)
         {
             return position;
@@ -48,6 +50,7 @@ public class GameBounds2D : MonoBehaviour
 
     public static Vector2 ClampToPlayArea(Vector2 position, float extraInset = 0f)
     {
+        // Static access keeps player, enemy, and spawn code using the same boundary.
         return Instance != null ? Instance.ClampPosition(position, extraInset) : position;
     }
 

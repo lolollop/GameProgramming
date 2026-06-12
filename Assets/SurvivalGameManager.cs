@@ -1,5 +1,6 @@
 using UnityEngine;
 
+// Draws the basic HUD and handles the defeat state for the current run.
 public class SurvivalGameManager : MonoBehaviour
 {
     private static SurvivalGameManager instance;
@@ -37,6 +38,7 @@ public class SurvivalGameManager : MonoBehaviour
 
         if (player != null)
         {
+            // Player death is event-driven so the HUD manager does not need to poll health.
             player.PlayerDied += OnPlayerDied;
         }
     }
@@ -60,6 +62,7 @@ public class SurvivalGameManager : MonoBehaviour
 
     private void OnGUI()
     {
+        // Prototype HUD: simple immediate-mode UI is enough for this vertical slice.
         if (player == null)
         {
             return;

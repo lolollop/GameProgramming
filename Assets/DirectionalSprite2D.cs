@@ -1,6 +1,7 @@
 using UnityEngine;
 
 [RequireComponent(typeof(SpriteRenderer))]
+// Reusable helper for swapping left/right sprites based on facing direction.
 public class DirectionalSprite2D : MonoBehaviour
 {
     public Sprite leftSprite;
@@ -20,6 +21,7 @@ public class DirectionalSprite2D : MonoBehaviour
 
     public void SetFacing(float horizontalDirection)
     {
+        // Very small values are ignored so the sprite does not flicker when nearly still.
         if (horizontalDirection > 0.01f)
         {
             facingRight = true;

@@ -1,5 +1,6 @@
 using UnityEngine;
 
+// Collectible reward dropped by enemies; gives experience to the player.
 public class ExperienceGem : MonoBehaviour
 {
     private static Sprite cachedGemSprite;
@@ -14,6 +15,7 @@ public class ExperienceGem : MonoBehaviour
 
     public static ExperienceGem Create(Vector3 position, int amount)
     {
+        // Runtime creation keeps the reward loop working even without a prefab.
         GameObject gemObject = new GameObject("ExperienceGem");
         gemObject.transform.position = position;
 
@@ -41,6 +43,7 @@ public class ExperienceGem : MonoBehaviour
 
     private void Update()
     {
+        // The gem can be collected from a distance when pickup range is upgraded.
         if (collected)
         {
             return;
@@ -82,6 +85,7 @@ public class ExperienceGem : MonoBehaviour
 
     private void EnsureVisual()
     {
+        // Create a simple visual if no sprite was assigned in the Inspector.
         SpriteRenderer spriteRenderer = GetComponent<SpriteRenderer>();
         if (spriteRenderer == null)
         {
@@ -99,6 +103,7 @@ public class ExperienceGem : MonoBehaviour
 
     private void EnsureCollider()
     {
+        // Trigger collider allows pickup without physical blocking.
         CircleCollider2D circleCollider = GetComponent<CircleCollider2D>();
         if (circleCollider == null)
         {
@@ -132,6 +137,7 @@ public class ExperienceGem : MonoBehaviour
 
     private static Sprite GetGemSprite()
     {
+        // Cache the generated sprite so all runtime gems can reuse it.
         if (cachedGemSprite != null)
         {
             return cachedGemSprite;

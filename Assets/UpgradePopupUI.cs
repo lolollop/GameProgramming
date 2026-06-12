@@ -4,6 +4,7 @@ using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.UI;
 
+// Displays the three level-up choices and reports the selected upgrade type.
 public class UpgradePopupUI : MonoBehaviour
 {
     [SerializeField] private GameObject popupRoot;
@@ -17,6 +18,7 @@ public class UpgradePopupUI : MonoBehaviour
 
     public static UpgradePopupUI CreateRuntimePopup()
     {
+        // Runtime fallback lets the upgrade system work even if no UI was placed in the scene.
         EnsureEventSystem();
 
         GameObject canvasObject = new GameObject("RuntimeUpgradeCanvas");
@@ -76,6 +78,7 @@ public class UpgradePopupUI : MonoBehaviour
 
     public void Show(LevelUpOption[] options, Action<UpgradeType> selectedCallback)
     {
+        // Rebuild button labels and callbacks each time a new level-up is offered.
         EnsureInitialized();
         currentOptions = options;
         onSelected = selectedCallback;
@@ -143,11 +146,13 @@ public class UpgradePopupUI : MonoBehaviour
 
         UpgradeType selectedType = currentOptions[index].Type;
         Hide();
+        // The callback is owned by UpgradeManager, which applies the actual stat change.
         onSelected?.Invoke(selectedType);
     }
 
     private void AutoFillButtons()
     {
+        // Supports both manually assigned UI buttons and the runtime-created popup.
         if (HasAssignedButton())
         {
             return;
@@ -242,6 +247,7 @@ public class UpgradePopupUI : MonoBehaviour
 
     private static void EnsureEventSystem()
     {
+        // Unity UI buttons need an EventSystem to receive clicks.
         if (FindObjectOfType<EventSystem>() != null)
         {
             return;

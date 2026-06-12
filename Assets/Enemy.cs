@@ -10,6 +10,7 @@ public class EnemyConfig
     public int experienceReward = 1;
 }
 
+// Handles simple chase AI, contact damage, and experience drops for one enemy.
 public class Enemy : MonoBehaviour
 {
     [Header("Config")]
@@ -31,6 +32,7 @@ public class Enemy : MonoBehaviour
         currentHealth = config.maxHealth;
         directionalSprite = GetComponent<DirectionalSprite2D>();
 
+        // Enemies follow the single player object by tag.
         GameObject playerObj = GameObject.FindGameObjectWithTag("Player");
         if (playerObj != null)
         {
@@ -45,6 +47,7 @@ public class Enemy : MonoBehaviour
             return;
         }
 
+        // Direct chase behaviour is enough for this arena-based vertical slice.
         Vector2 nextPosition = Vector2.MoveTowards(transform.position, player.position, config.moveSpeed * Time.deltaTime);
         transform.position = GameBounds2D.ClampToPlayArea(nextPosition, boundsInset);
 
@@ -85,6 +88,7 @@ public class Enemy : MonoBehaviour
 
     private void TryDealContactDamage(GameObject target)
     {
+        // Damage is rate-limited so touching an enemy does not drain HP instantly.
         if (Time.time < nextContactDamageTime)
         {
             return;
@@ -108,6 +112,7 @@ public class Enemy : MonoBehaviour
 
     private void DropExperienceGem()
     {
+        // Prefer an assigned prefab, but fall back to a runtime-generated gem.
         if (experienceGemPrefab != null)
         {
             GameObject gemObject = Instantiate(experienceGemPrefab, transform.position, Quaternion.identity);

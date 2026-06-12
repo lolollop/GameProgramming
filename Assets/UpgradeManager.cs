@@ -1,5 +1,6 @@
 using UnityEngine;
 
+// Connects player level-up events to the upgrade UI and game pause flow.
 public class UpgradeManager : MonoBehaviour
 {
     [SerializeField] private UpgradePopupUI upgradePopupUI;
@@ -36,6 +37,7 @@ public class UpgradeManager : MonoBehaviour
         player = FindObjectOfType<PlayerController>();
         if (player != null)
         {
+            // PlayerController owns level logic; this manager owns the popup response.
             player.LevelUpOffered += ShowUpgradeChoices;
         }
 
@@ -69,6 +71,7 @@ public class UpgradeManager : MonoBehaviour
 
         upgradePending = true;
         player.SetInputLocked(true);
+        // Pause gameplay so the player can choose without being attacked.
         Time.timeScale = 0f;
         upgradePopupUI.Show(options, ApplyUpgradeAndResume);
     }
@@ -84,6 +87,7 @@ public class UpgradeManager : MonoBehaviour
         player.SetInputLocked(false);
         upgradePopupUI.Hide();
         upgradePending = false;
+        // Resume the game after the selected upgrade has been applied.
         Time.timeScale = 1f;
     }
 }

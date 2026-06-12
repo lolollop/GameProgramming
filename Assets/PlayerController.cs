@@ -44,6 +44,7 @@ public class LevelUpOption
     public string Description;
 }
 
+// Main player script: movement, shooting, health, experience, and upgrades.
 public class PlayerController : MonoBehaviour
 {
     [Header("Config")]
@@ -103,6 +104,7 @@ public class PlayerController : MonoBehaviour
 
     private void Start()
     {
+        // Cache common components once instead of finding them every frame.
         rb = GetComponent<Rigidbody2D>();
         spriteRenderer = GetComponent<SpriteRenderer>();
         directionalSprite = GetComponent<DirectionalSprite2D>();
@@ -137,6 +139,7 @@ public class PlayerController : MonoBehaviour
             return;
         }
 
+        // Shooting is automatic; the mouse only controls the aim direction.
         if (Time.time >= nextFireTime)
         {
             Shoot();
@@ -152,6 +155,7 @@ public class PlayerController : MonoBehaviour
         }
 
         Vector2 nextPosition = rb.position + movement.normalized * combatConfig.moveSpeed * Time.fixedDeltaTime;
+        // Clamp movement to the playable map without adding physical wall colliders.
         nextPosition = GameBounds2D.ClampToPlayArea(nextPosition, boundsInset);
         rb.MovePosition(nextPosition);
 
@@ -200,6 +204,7 @@ public class PlayerController : MonoBehaviour
 
         if (invulnerabilityDuration > 0f)
         {
+            // Short protection prevents instant damage at the start of a new wave.
             invulnerableUntil = Mathf.Max(invulnerableUntil, Time.time + invulnerabilityDuration);
         }
 
@@ -218,6 +223,7 @@ public class PlayerController : MonoBehaviour
         if (!inputLocked && currentExperience >= experienceToNextLevel)
         {
             currentExperience -= experienceToNextLevel;
+            // Level-up triggers an event; UpgradeManager handles the UI.
             LevelUp();
         }
 
@@ -226,6 +232,7 @@ public class PlayerController : MonoBehaviour
 
     public void ApplyUpgrade(UpgradeType upgradeType)
     {
+        // Upgrade effects directly modify the player's current tuning values.
         switch (upgradeType)
         {
             case UpgradeType.FireRate:
@@ -267,6 +274,7 @@ public class PlayerController : MonoBehaviour
         Vector2 origin = firePoint != null
             ? (Vector2)firePoint.position
             : (rb != null ? rb.position : (Vector2)transform.position);
+        // FirePoint is the source of truth for aiming so bullets match the visible muzzle.
         Vector2 mouseDirection = firePoint != null
             ? ((Vector2)firePoint.right).normalized
             : (currentMousePos - origin).normalized;
@@ -281,6 +289,7 @@ public class PlayerController : MonoBehaviour
 
     private void FireProjectileSpread(Vector2 spawnPosition, Vector2 centerDirection)
     {
+        // Multishot adds bullets inside a fixed angle range instead of widening forever.
         int projectileCount = Mathf.Max(1, combatConfig.projectilesPerShot);
         if (projectileCount == 1)
         {
@@ -299,6 +308,7 @@ public class PlayerController : MonoBehaviour
 
     private void FireBullet(Vector2 spawnPosition, Vector2 direction)
     {
+        // The bullet receives its direction at spawn time and then travels independently.
         float bulletAngle = Mathf.Atan2(direction.y, direction.x) * Mathf.Rad2Deg;
         Quaternion bulletRotation = Quaternion.Euler(0f, 0f, bulletAngle);
         GameObject bulletObject = Instantiate(bulletPrefab, spawnPosition, bulletRotation);
@@ -335,6 +345,7 @@ public class PlayerController : MonoBehaviour
 
     private LevelUpOption[] BuildRandomOptions(int optionCount)
     {
+        // Build a unique random set of upgrade choices for the popup.
         List<UpgradeType> candidateTypes = new List<UpgradeType>
         {
             UpgradeType.FireRate,
@@ -425,6 +436,7 @@ public class PlayerController : MonoBehaviour
 
     private void PlayHitFlash()
     {
+        // Restarting the coroutine makes repeated hits visibly refresh the flash.
         if (spriteRenderer == null || hitFlashDuration <= 0f)
         {
             return;
@@ -441,6 +453,7 @@ public class PlayerController : MonoBehaviour
     private IEnumerator HitFlashRoutine()
     {
         spriteRenderer.color = hitFlashColor;
+        // Realtime wait still completes if the game is paused after death.
         yield return new WaitForSecondsRealtime(hitFlashDuration);
 
         if (spriteRenderer != null)
@@ -461,6 +474,7 @@ public class PlayerController : MonoBehaviour
 
     private Vector2 GetAimAssistDirection(Vector2 mouseDirection, Vector2 origin)
     {
+        // Find the closest enemy inside the assist cone and blend aim slightly toward it.
         Enemy[] enemies = FindObjectsOfType<Enemy>();
         Enemy bestEnemy = null;
         float bestDistance = float.MaxValue;
@@ -509,6 +523,7 @@ public class PlayerController : MonoBehaviour
 
     private void UpdateFacingFromInput()
     {
+        // Facing is based on the last horizontal key press, not the mouse aim direction.
         if (Input.GetKeyDown(KeyCode.A) || Input.GetKeyDown(KeyCode.LeftArrow))
         {
             lastHorizontalFacing = -1f;
@@ -544,6 +559,7 @@ public class PlayerController : MonoBehaviour
         Vector2 lookDir = mousePos - aimOrigin;
         if (lookDir.sqrMagnitude > 0.0001f)
         {
+            // Bullet art faces right, so the fire point's right axis is used as forward.
             firePoint.right = lookDir.normalized;
         }
     }
